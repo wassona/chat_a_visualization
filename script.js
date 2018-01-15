@@ -32,7 +32,9 @@ d3.json("Hangouts.json", function(file){
 	data = data[19].conversation_state;
 
 	var conversation = data.conversation;
-	var messages = data.event;
+	var messages = data.event.sort(function(a,b){
+		return a.timestamp - b.timestamp;
+	});
 	var people = {};
 	var user_ids = [];
 
@@ -101,6 +103,32 @@ d3.json("Hangouts.json", function(file){
 											})
 					.on("mousemove", function(){return tooltip.style("top", (event.pageY-10)+"px").style("left",(event.pageX+10)+"px");})
 					.on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+
+	var chatWindow = d3.select('.chat-window');
+
+	var chatPosts = chatWindow.selectAll('.chat-post')
+								.data(messages)
+								.enter().append('p')
+								.text((d)=>{
+									console.log(d);
+									if (d.membership_change) {
+										return `${people[d.membership_change.participant_id.gaia_id]}  ${d.membership_change.type === "JOIN" ? 'joined' : 'left'} at ${new Date(d.timestamp/1000)}`
+									} else if (d.conversation_rename) {
+										return `${people[d.sender_id.gaia_id]} renamed the chat to ${d.conversation_rename.new_name} from ${d.conversation_rename.old_name} at ${new Date(d.timestamp/1000)}`
+									} else if (d.hangout_event) {
+										return `${people[d.hangout_event.participant_id.gaia_id]} performed event ${d.hangout_event.event_type} at ${new Date(d.timestamp/1000)}`
+									} else if (d.chat_message.message_content.attachment) {
+										if (d.chat_message.message_content.attachment[0].embed_item.id) {
+											return '' + d.chat_message.message_content.attachment[0].embed_item.id;
+										} else {
+											return '' + d.chat_message.message_content.attachment[0].embed_item["embeds.PlusPhoto.plus_photo"].thumbnail.image_url;
+										}
+									} else if (d.chat_message){
+										return `${people[d.sender_id.gaia_id]} said: ${d.chat_message.message_content.segment[0].text} on ${new Date(d.timestamp/1000)}`
+									} else {
+										console.log(d)
+									}
+								})
 
 })
 
